@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Terminal%20UI-Rich-E95420?style=for-the-badge" alt="Rich UI" />
 </p>
 
-A DevSecOps terminal CLI that combines **deterministic static analysis** (via [Trivy](https://trivy.dev/)) with **generative AI remediation** powered by sovereign Malaysian LLMs hosted on [YTL AI Labs](https://www.ytl.ai/) (`ilmuapi`).
+A DevSecOps terminal CLI that combines **deterministic static analysis** (via [Trivy](https://trivy.dev/)) with **generative AI remediation** powered by sovereign Malaysian LLMs hosted on [YTL AI Labs](https://www.ytlailabs.com/) (`ilmuapi`).
 
 > **Architectural Principle**: Trivy is the immutable, reproducible detection source of truth; YTL's ILMU acts as the pedagogical and remediation layer. The AI does not invent or dispute findings—it translates cryptic CVE/rule findings into plain-English explanations, real-world business blast-radius assessments, and syntax-highlighted HCL remediation snippets.
 
@@ -163,4 +163,4 @@ python scanner.py fixtures/terragoat/terraform/aws
 
 ## Acknowledgments
 
-Special thanks to **[YTL AI Labs](https://www.ytl.ai/)** for providing API access and compute tokens to explore applied AIOps and cloud security workflows on sovereign AI infrastructure.
+Special thanks to **[YTL AI Labs](https://www.ytlailabs.com/)** for providing API access and compute tokens to explore applied AIOps and cloud security workflows on sovereign AI infrastructure.
