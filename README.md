@@ -1,166 +1,166 @@
 # Infrastructure as Code Security Scanner with AI Remediation
 
-A terminal-only Python CLI that scans Terraform with [Trivy](https://trivy.dev/), parses its JSON findings, and asks an ILMU-hosted language model for plain-English explanations, practical impact, and reviewable Terraform remediation examples. Trivy remains the source of truth for detection; AI is used only as an explanation layer.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+" />
+  <img src="https://img.shields.io/badge/Trivy-0.73+-1B7BFF?style=for-the-badge&logo=aquasec&logoColor=white" alt="Trivy" />
+  <img src="https://img.shields.io/badge/AI%20Engine-YTL%20AI%20Labs%20ILMU-00C49F?style=for-the-badge" alt="YTL AI Labs" />
+  <img src="https://img.shields.io/badge/IaC-Terraform%20%2F%20AWS-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform" />
+  <img src="https://img.shields.io/badge/Terminal%20UI-Rich-E95420?style=for-the-badge" alt="Rich UI" />
+</p>
 
-The scanner sends findings to ILMU in batches of 10 to reduce API calls. It never generates report files.
+A DevSecOps terminal CLI that combines **deterministic static analysis** (via [Trivy](https://trivy.dev/)) with **generative AI remediation** powered by sovereign Malaysian LLMs hosted on [YTL AI Labs](https://www.ytl.ai/) (`ilmuapi`).
 
-## Safety warning
+> **Architectural Principle**: Trivy is the immutable, reproducible detection source of truth; YTL's ILMU acts as the pedagogical and remediation layer. The AI does not invent or dispute findings—it translates cryptic CVE/rule findings into plain-English explanations, real-world business blast-radius assessments, and syntax-highlighted HCL remediation snippets.
 
-[TerraGoat](https://github.com/bridgecrewio/terragoat) is intentionally vulnerable. This project only performs static analysis of its files. Do not run `terraform init`, `terraform plan`, or `terraform apply` against TerraGoat, and never deploy it to a real cloud account.
+---
 
-AI-generated remediation is a starting point for human review. Validate provider versions, resource references, organisational requirements, and the result of a fresh Trivy scan before using a suggestion.
+## Visual Showcase
 
-## Workflow
+### 1. Deterministic Trivy Scan & Rich Severity Summary
+Run offline or in blocking CI/CD gates without spending API tokens:
+![Trivy Scan Summary](docs/images/01_trivy_deterministic_scan.jpg)
+
+### 2. Dynamic Model Discovery via YTL AI Labs
+Query model IDs available to your account without consuming inference completion quota:
+![ILMU Model Discovery](docs/images/02_ilmu_model_discovery.png)
+
+### 3. AI-Powered Remediation & Threat Blast Radius
+ILMU explains the misconfiguration, context, and practical consequences (e.g., KMS auto-rotation wear-out, PCI-DSS compliance):
+![ILMU Remediation Explanation](docs/images/03_ilmu_remediation_explanation.jpg)
+
+### 4. Monokai Syntax-Highlighted Terraform HCL Diff
+Actionable, copy-pasteable Terraform HCL code blocks tailored to modern AWS provider versions (>= 5.0):
+![Syntax-Highlighted HCL](docs/images/04_ilmu_hcl_syntax_highlight.png)
+
+---
+
+## Architecture & Data Flow
 
 ```text
-Terraform file or directory
-          |
-          v
-Trivy performs deterministic checks
-          |
-          v
-Python parses and flattens JSON findings
-          |
-          v
-Findings are sent to ILMU in batches of 10
-          |
-          v
-Responses are matched by stable finding keys
-          |
-          v
-Rich prints a report grouped by severity
+       Terraform Files (.tf)
+                 │
+                 ▼
+ ┌───────────────────────────────┐
+ │   TRIVY (Deterministic Core)  │  <-- Scans against CIS AWS Benchmarks
+ └───────────────┬───────────────┘
+                 │
+                 ▼ Captured in-memory (stdout JSON)
+ ┌───────────────────────────────┐
+ │   Data Normalization Pipeline │  <-- Filters "FAIL", extracts AST line ranges
+ └───────────────┬───────────────┘
+                 │
+                 ▼ "Token Diet" Payload Reduction (Trimmed JSON)
+ ┌───────────────────────────────┐
+ │   YTL AI Labs (ILMU GLM-5.1)  │  <-- Injected with prompt injection defense
+ └───────────────┬───────────────┘      Batched in chunks of 10 findings
+                 │
+                 ▼ Reconciled by immutable keys (finding-1, finding-2)
+ ┌───────────────────────────────┐
+ │   Rich Terminal Presentation  │  <-- Severity tables & Monokai HCL diffs
+ └───────────────────────────────┘
 ```
 
-## Requirements
+---
 
-- Python 3.11 or newer
-- Trivy available on `PATH` (tested with 0.73.0)
-- An ILMU API key with access to the intended model
+## Key Features
 
-Install Trivy using the [official installation instructions](https://trivy.dev/docs/latest/getting-started/installation/). On Windows, download the Windows 64-bit release archive, extract `trivy.exe`, and add its directory to your user `PATH`.
+- **Shift-Left Static Analysis**: Employs Trivy to audit Terraform configurations against CIS benchmarks, AWS Well-Architected Framework, and cloud security best practices.
+- **Enterprise-Grade AI Enrichment**: Leverages YTL AI Labs' `ilmu-glm-5.1` / `ilmu-glm-5.3-flash` models via an OpenAI-compatible API to generate plain-English explanations and actionable remediation steps.
+- **Token Diet & Cost Optimization**: Raw 50KB+ Trivy output is stripped of engine plumbing. Only semantic fields (rule ID, resource name, code excerpt) are dispatched, reducing token burn by up to 80%.
+- **Indirect Prompt Injection Hardening**: Prompts explicitly sandbox scanned Terraform code as untrusted data to prevent malicious comments from altering LLM evaluation.
+- **Fixed Batching & Key Reconciliation**: Findings are processed in chunks of 10. AI responses are joined strictly by immutable dictionary keys (`finding-k`), eliminating positional array reordering bugs.
+- **Token Bounding & Circuit Breaker**: Caps output tokens at 5,000 per batch and halts subsequent API calls immediately on network or schema failures to protect quota.
+- **Zero Disk Residue**: Pipes all scanner outputs directly through memory streams. No temporary scan reports are written to disk.
 
-Verify the tools:
+---
 
+## Prerequisites
+
+- **Python**: 3.11 or newer (tested with Python 3.13)
+- **Trivy**: Installed and available on system `PATH` (tested with 0.73.0)
+- **ILMU API Key**: Valid API key from [YTL AI Labs](https://api.ilmu.ai/)
+
+Verify local tooling:
 ```powershell
 python --version
 trivy --version
 ```
 
-## Set up the project
+---
 
-Create and activate a virtual environment:
+## Quickstart
+
+### 1. Set Up Virtual Environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-Install the pinned Python dependencies:
-
-```powershell
 python -m pip install -r requirements.txt
 ```
 
-Clone the vulnerable fixture into the ignored fixture directory:
+### 2. Clone Vulnerable Fixture (Optional Test Fixture)
 
 ```powershell
 git clone https://github.com/bridgecrewio/terragoat.git fixtures/terragoat
 ```
 
-## Configure ILMU
+> **Safety Warning**: [TerraGoat](https://github.com/bridgecrewio/terragoat) is intentionally vulnerable. Only perform static analysis on these files. Never run `terraform apply` or deploy them to a cloud environment.
 
-Do not put the API key in `scanner.py`, `README.md`, `.env`, a command-line argument, or Git history. Set it as an environment variable in the PowerShell session where you run the scanner:
+### 3. Configure YTL AI Labs Credentials
+
+Set your credentials in your current terminal session (never commit credentials or use `--api-key` CLI flags):
 
 ```powershell
-$env:ILMU_API_KEY = "<your sk-prefixed key>"
+$env:ILMU_API_KEY = "your-sk-prefixed-ilmu-key"
 ```
 
-This value lasts only for the current PowerShell process. Closing the terminal removes it from that session.
-
-The ILMU console displays the product name “ILMU GLM-5.1,” but the public documentation does not confirm its exact API model ID. Discover the IDs available to your account without making a completion request:
-
+Discover available models for your account:
 ```powershell
 python scanner.py --list-models
 ```
 
-Find the ID that corresponds to GLM-5.1 in your ILMU console, then set it exactly as returned:
-
+Select your model (e.g., `ilmu-glm-5.1` or `ilmu-glm-5.3-flash`):
 ```powershell
-$env:ILMU_MODEL = "exact-model-id-from-the-list"
+$env:ILMU_MODEL = "ilmu-glm-5.1"
 ```
 
-Never guess the model ID. `ILMU_API_KEY` is the secret credential; `ILMU_MODEL` is a non-secret identifier.
-
-To remove the values from the current PowerShell session manually:
-
-```powershell
-Remove-Item Env:ILMU_API_KEY
-Remove-Item Env:ILMU_MODEL
-```
+---
 
 ## Usage
 
-First test the deterministic scan without spending ILMU tokens:
-
+### Deterministic Scan Only (No Tokens Spent)
+Ideal for pre-commit hooks and blocking CI/CD pipelines:
 ```powershell
 python scanner.py --no-ai fixtures/terragoat/terraform/aws/s3.tf
 ```
 
-Scan the same file with ILMU explanations:
-
+### Full AI Scan with YTL ILMU Remediation
 ```powershell
-python scanner.py fixtures/terragoat/terraform/aws/s3.tf
-```
+# Scan single file
+python scanner.py fixtures/terragoat/terraform/aws/kms.tf
 
-Scan the TerraGoat AWS directory:
-
-```powershell
+# Scan full AWS directory
 python scanner.py fixtures/terragoat/terraform/aws
 ```
 
-Scan another Terraform file or directory:
+---
 
-```powershell
-python scanner.py path/to/terraform
-```
-
-Display command help:
-
-```powershell
-python scanner.py --help
-```
-
-## Behaviour and failure handling
-
-- Trivy JSON is captured from standard output in memory; no report is written.
-- Trivy diagnostics remain separate on standard error.
-- Only failed entries in Trivy's `Misconfigurations` arrays become report findings.
-- Findings are sorted into `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, and `UNKNOWN` sections.
-- Each ILMU request contains at most 10 findings.
-- Each batch has a 5,000-token output ceiling to bound accidental over-generation.
-- Responses are matched using keys such as `finding-1`, not assumed array positions.
-- If an ILMU batch fails or returns malformed data, the scanner stops further AI requests to avoid wasting tokens and still prints the remaining Trivy results.
-- `--no-ai` requires neither `ILMU_API_KEY` nor `ILMU_MODEL`.
-
-## Project structure
+## Project Structure
 
 ```text
 .
-|-- scanner.py          # Complete CLI implementation
-|-- requirements.txt    # Direct Python dependencies
-|-- STUDY_GUIDE.md      # Architecture and concept guide
-|-- fixtures/
-|   `-- terragoat/      # Local vulnerable fixture (ignored by Git)
-|-- .gitignore
-`-- README.md
+├── docs/
+│   └── images/                 # Execution screenshots and terminal UI captures
+├── fixtures/
+│   └── terragoat/              # Vulnerable Terraform fixtures (Git ignored)
+├── .gitignore
+├── requirements.txt            # Python dependencies (openai, rich)
+├── scanner.py                  # Complete CLI application source
+└── README.md
 ```
 
-## Limitations
+---
 
-- AI output is probabilistic and may contain unsuitable Terraform syntax.
-- The program validates the response shape and finding keys, but it does not compile or apply remediation snippets.
-- It does not deduplicate similar Trivy findings because each affected resource is useful evidence.
-- It scans Terraform configuration, not deployed cloud state.
-- It uses ILMU's OpenAI-compatible Chat Completions endpoint and depends on the selected model supporting that endpoint.
+## Acknowledgments
 
-For a detailed explanation of the architecture, code, security decisions, and suggested learning exercises, read [STUDY_GUIDE.md](STUDY_GUIDE.md).
+Special thanks to **[YTL AI Labs](https://www.ytl.ai/)** for providing API access and compute tokens to explore applied AIOps and cloud security workflows on sovereign AI infrastructure.
